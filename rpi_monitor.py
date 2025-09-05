@@ -131,6 +131,46 @@ class RPiMonitor:
             pass
         return stats
     
+    def get_storage_capacity(self):
+        """Get storage capacity information for all mounted filesystems"""
+        capacities = {}
+        try:
+            # Get disk usage for all mounted filesystems
+            disk_usage = psutil.disk_usage('/')
+            total_bytes = disk_usage.total
+            used_bytes = disk_usage.used
+            free_bytes = disk_usage.free
+            used_percent = (used_bytes / total_bytes) * 100 if total_bytes > 0 else 0
+            
+            capacities['root'] = {
+                'total': total_bytes,
+                'used': used_bytes,
+                'free': free_bytes,
+                'percent': used_percent,
+                'mount': '/'
+            }
+            
+            # Get additional mount points if available
+            partitions = psutil.disk_partitions()
+            for partition in partitions:
+                if partition.mountpoint != '/' and not partition.mountpoint.startswith('/boot'):
+                    try:
+                        usage = psutil.disk_usage(partition.mountpoint)
+                        if usage.total > 0:  # Valid filesystem
+                            mount_name = partition.mountpoint.replace('/', '_').strip('_') or 'root'
+                            capacities[mount_name] = {
+                                'total': usage.total,
+                                'used': usage.used,
+                                'free': usage.free,
+                                'percent': (usage.used / usage.total) * 100,
+                                'mount': partition.mountpoint
+                            }
+                    except (PermissionError, OSError):
+                        continue  # Skip inaccessible filesystems
+        except:
+            pass
+        return capacities
+    
     def get_uptime(self):
         """Get system uptime"""
         try:
@@ -407,6 +447,23 @@ class RPiMonitor:
             self.screen.addstr(row, 2, "No disk activity", text_color)
             row += 1
         
+        # Add storage capacity bars
+        storage_info = self.get_storage_capacity()
+        if storage_info:
+            row += 1  # Add some space
+            section_color = curses.color_pair(5) if curses.has_colors() else curses.A_BOLD
+            self.screen.addstr(row, 0, "Storage Utilization:", section_color)
+            row += 1
+            
+            for name, info in storage_info.items():
+                total_gb = info['total'] / (1024**3)
+                used_gb = info['used'] / (1024**3)
+                mount_label = info['mount']
+                capacity_str = f"{used_gb:.1f}GB/{total_gb:.1f}GB"
+                
+                self.draw_bar(row, 2, 20, info['percent'], mount_label, capacity_str)
+                row += 1
+        
         return row
     
     def draw_disk_summary_column(self, start_y, disk_stats, bar_width):
@@ -470,6 +527,28 @@ class RPiMonitor:
             text_color = curses.color_pair(1) if curses.has_colors() else curses.A_NORMAL
             self.screen.addstr(row, 2, "No disk activity", text_color)
             row += 1
+        
+        # Add storage capacity bars
+        storage_info = self.get_storage_capacity()
+        if storage_info:
+            row += 1  # Add some space
+            section_color = curses.color_pair(5) if curses.has_colors() else curses.A_BOLD
+            self.screen.addstr(row, 0, "Storage Utilization:", section_color)
+            row += 1
+            
+            for name, info in storage_info.items():
+                total_gb = info['total'] / (1024**3)
+                used_gb = info['used'] / (1024**3)
+                mount_label = info['mount']
+                
+                # Shorter format for column layout
+                if total_gb < 10:
+                    capacity_str = f"{used_gb:.1f}/{total_gb:.1f}GB"
+                else:
+                    capacity_str = f"{used_gb:.0f}/{total_gb:.0f}GB"
+                
+                self.draw_bar(row, 2, bar_width, info['percent'], mount_label, capacity_str)
+                row += 1
         
         return row
     

@@ -13,6 +13,7 @@ A cross-platform terminal-based system monitor similar to NMON that displays rea
 - **Memory Utilization**: RAM usage statistics with visual bar
 - **Network Activity**: Real-time network I/O with horizontal bar charts
 - **Disk Activity**: Disk I/O statistics with horizontal bar charts
+- **Storage Utilization**: Filesystem capacity usage for all mounted drives
 - **Top Processes**: Top 5 processes by CPU usage
 - **Logged Users**: List of currently logged-in users
 - **Uptime**: System uptime display
