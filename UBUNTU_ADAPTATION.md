@@ -163,6 +163,7 @@ The system uses Ubuntu's package manager instead of pip to avoid conflicts with 
 - ✅ Temperature monitoring with color coding
 - ✅ Network activity with logarithmic scaling
 - ✅ Disk I/O monitoring
+- ✅ **Disk utilization monitoring with horizontal bar**
 - ✅ Memory utilization display
 - ✅ Process monitoring (top 5 by CPU)
 - ✅ User session tracking
@@ -214,6 +215,48 @@ rpi-monitor/
 └── UBUNTU_ADAPTATION.md    # This documentation
 ```
 
+### 8. Added Disk Utilization Monitoring
+
+#### New Function: `get_disk_usage()`
+```python
+def get_disk_usage(self):
+    """Get disk utilization for all mounted filesystems"""
+    disk_usage = []
+    total_used = 0
+    total_size = 0
+    
+    # Get all disk partitions and filter out virtual filesystems
+    partitions = psutil.disk_partitions()
+    for partition in partitions:
+        # Skip virtual/special filesystems
+        if partition.fstype in ['tmpfs', 'devtmpfs', 'proc', 'sysfs', ...]:
+            continue
+        if partition.mountpoint in ['/dev', '/proc', '/sys', '/run']:
+            continue
+        
+        # Calculate usage for real filesystems
+        usage = psutil.disk_usage(partition.mountpoint)
+        # Focus on main data partitions (/, /home, /var, /usr, /mnt, /media)
+```
+
+#### Enhanced Disk Activity Display
+```python
+# Added to draw_disk_summary_column() function
+disk_usage = self.get_disk_usage()
+if disk_usage['total_size'] > 0:
+    used_gb = disk_usage['total_used'] / (1024**3)
+    total_gb = disk_usage['total_size'] / (1024**3)
+    usage_str = f"{used_gb:.1f}GB/{total_gb:.1f}GB"
+    
+    self.draw_bar(row, 2, bar_width, disk_usage['overall_percent'], "Disk Usage", usage_str)
+```
+
+**Features of Disk Utilization Monitoring:**
+- **Smart Filtering**: Excludes virtual filesystems (tmpfs, proc, sys, etc.)
+- **Aggregate View**: Combines usage across all real storage partitions
+- **Visual Display**: Horizontal bar showing percentage with GB usage
+- **Partition Focus**: Prioritizes main data partitions (/, /home, /var, /usr, mounted drives)
+
 ## Future Enhancements
 
 Potential improvements for the Ubuntu version:
@@ -221,8 +264,9 @@ Potential improvements for the Ubuntu version:
 2. **Advanced Sensors**: Integrate with lm-sensors for more hardware data
 3. **Systemd Integration**: Add systemd service file for background monitoring
 4. **Configuration File**: Allow customization of thresholds and display options
-5. **Multiple Disk Support**: Enhanced per-disk monitoring instead of aggregate
+5. **Per-Disk Monitoring**: Individual disk utilization instead of aggregate
 6. **Network Interface Configuration**: Auto-detect interface types and speeds
+7. **Disk Health Monitoring**: Add SMART data monitoring for SSDs/HDDs
 
 ## Summary
 

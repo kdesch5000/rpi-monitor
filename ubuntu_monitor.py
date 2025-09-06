@@ -168,6 +168,55 @@ class UbuntuMonitor:
         except:
             return {'total': 0, 'used': 0, 'available': 0, 'percent': 0}
     
+    def get_disk_usage(self):
+        """Get disk utilization for all mounted filesystems"""
+        disk_usage = []
+        total_used = 0
+        total_size = 0
+        
+        try:
+            # Get all disk partitions
+            partitions = psutil.disk_partitions()
+            for partition in partitions:
+                try:
+                    # Skip virtual/special filesystems
+                    if partition.fstype in ['tmpfs', 'devtmpfs', 'proc', 'sysfs', 'cgroup', 'cgroup2', 'pstore', 'bpf', 'debugfs']:
+                        continue
+                    if partition.mountpoint in ['/dev', '/proc', '/sys', '/run']:
+                        continue
+                    
+                    usage = psutil.disk_usage(partition.mountpoint)
+                    if usage.total > 0:  # Valid filesystem
+                        disk_usage.append({
+                            'device': partition.device,
+                            'mountpoint': partition.mountpoint,
+                            'fstype': partition.fstype,
+                            'total': usage.total,
+                            'used': usage.used,
+                            'free': usage.free,
+                            'percent': (usage.used / usage.total) * 100
+                        })
+                        # Add to totals (for root filesystem and main data partitions)
+                        if partition.mountpoint in ['/', '/home', '/var', '/usr'] or partition.mountpoint.startswith('/mnt') or partition.mountpoint.startswith('/media'):
+                            total_used += usage.used
+                            total_size += usage.total
+                            
+                except (PermissionError, OSError):
+                    continue
+                    
+        except:
+            pass
+            
+        # Calculate overall utilization percentage
+        overall_percent = (total_used / total_size * 100) if total_size > 0 else 0
+        
+        return {
+            'partitions': disk_usage,
+            'total_used': total_used,
+            'total_size': total_size,
+            'overall_percent': overall_percent
+        }
+
     def get_top_processes(self):
         """Get top 5 processes by CPU usage"""
         processes = []
@@ -377,6 +426,18 @@ class UbuntuMonitor:
         else:
             text_color = curses.color_pair(1) if curses.has_colors() else curses.A_NORMAL
             self.screen.addstr(row, 2, "No disk activity", text_color)
+            row += 1
+        
+        # Add disk utilization bar
+        disk_usage = self.get_disk_usage()
+        if disk_usage['total_size'] > 0:
+            row += 1  # Add some spacing
+            # Display total disk utilization
+            used_gb = disk_usage['total_used'] / (1024**3)
+            total_gb = disk_usage['total_size'] / (1024**3)
+            usage_str = f"{used_gb:.1f}GB/{total_gb:.1f}GB"
+            
+            self.draw_bar(row, 2, bar_width, disk_usage['overall_percent'], "Disk Usage", usage_str)
             row += 1
         
         return row
