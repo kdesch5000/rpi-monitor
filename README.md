@@ -1,13 +1,14 @@
 # System Monitor
 
-A terminal-based system monitor similar to NMON that displays real-time system information. Available in two versions:
+A terminal-based system monitor similar to NMON that displays real-time system information. Available in three versions:
 
 - **`rpi_monitor.py`**: Optimized for Raspberry Pi hardware
-- **`ubuntu_monitor.py`**: Adapted for Ubuntu x86_64 systems
+- **`ubuntu_monitor.py`**: Adapted for Ubuntu x86_64 systems  
+- **`macos_monitor.py`**: Adapted for macOS (Apple Silicon & Intel)
 
 ## Features
 
-### Common Features (Both Versions)
+### Common Features (All Versions)
 - **CPU Utilization**: Per-core and average CPU usage with horizontal bars
 - **Memory Utilization**: RAM usage statistics with visual bar
 - **Network Activity**: Real-time network I/O with horizontal bar charts
@@ -25,6 +26,13 @@ A terminal-based system monitor similar to NMON that displays real-time system i
 - **Temperature Monitoring**: Intel CPU temperatures via thermal zones and hwmon
 - **Disk Utilization**: Total disk space usage across all partitions with horizontal bar
 - **Enhanced Hardware Support**: Support for modern x86_64 hardware sensors
+
+### macOS Version (`macos_monitor.py`)
+- **Apple Silicon Support**: P-Core/E-Core labeling for M1/M2/M3 chips
+- **Temperature Monitoring**: CPU temperature via powermetrics or load estimation
+- **APFS Filesystem**: Accurate disk usage calculation for macOS volume structure
+- **Smart Network Filtering**: Dynamic interface detection with 5-minute inactivity timeout
+- **Native Integration**: Uses BSD system calls and Darwin kernel interfaces
 
 ## Installation
 
@@ -50,6 +58,18 @@ A terminal-based system monitor similar to NMON that displays real-time system i
    chmod +x ubuntu_monitor.py
    ```
 
+### For macOS (`macos_monitor.py`)
+1. Run the setup script (handles virtual environment and dependencies):
+   ```bash
+   chmod +x macos_monitor.sh
+   ./macos_monitor.sh
+   ```
+
+2. For accurate temperature readings (optional):
+   ```bash
+   sudo ./macos_monitor.sh
+   ```
+
 ## Usage
 
 ### Raspberry Pi Version
@@ -66,6 +86,15 @@ python3 rpi_monitor.py
 python3 ubuntu_monitor.py
 ```
 
+### macOS Version
+```bash
+./macos_monitor.sh
+# or
+source venv/bin/activate && python3 macos_monitor.py
+# Simple text version (no curses):
+source venv/bin/activate && python3 macos_monitor_simple.py
+```
+
 ### Controls
 
 - Press `q` or `Q` to quit
@@ -73,7 +102,7 @@ python3 ubuntu_monitor.py
 
 ## Requirements
 
-### Both Versions
+### All Versions
 - Python 3.x
 - psutil library
 - curses (included with Python)
@@ -85,6 +114,11 @@ python3 ubuntu_monitor.py
 ### Ubuntu Version
 - Ubuntu 18.04+ or similar Linux distribution
 - x86_64 architecture
+
+### macOS Version  
+- macOS 10.14+ (tested on macOS Sonoma 14.6)
+- Apple Silicon (M1/M2/M3) or Intel architecture
+- Optional: sudo access for accurate temperature readings
 
 ## Technical Notes
 
@@ -100,8 +134,15 @@ python3 ubuntu_monitor.py
 - Enhanced filtering: Excludes virtual filesystems (tmpfs, proc, sys, etc.)
 - Network interfaces: Support for modern naming (wlp*, enp*)
 
+### macOS Version
+- CPU temperature: powermetrics command or load-based estimation
+- APFS filesystem: Handles complex volume structure (/System/Volumes/Data, etc.)
+- Network filtering: Dynamic interface detection with 5-minute inactivity timeout
+- Apple Silicon: P-Core (0-3) and E-Core (4-7) identification for M1 chips
+- System calls: Uses BSD sysctl and Darwin kernel interfaces
+
 ### Common Features
-- Network and disk I/O: `/proc/net/dev` and `/proc/diskstats`
+- Network and disk I/O: Platform-specific interfaces (Linux: /proc, macOS: psutil)
 - Interface adapts to terminal size automatically
 - Real-time updates every second
 - Two-column layout for efficient space usage
@@ -109,3 +150,4 @@ python3 ubuntu_monitor.py
 ## Documentation
 
 - **`UBUNTU_ADAPTATION.md`**: Detailed documentation of all modifications made for Ubuntu compatibility, including code changes, system analysis, and technical details.
+- **`MACOS_ADAPTATION.md`**: Comprehensive documentation of macOS adaptation, including Apple Silicon support, APFS filesystem handling, and network timeout features.
