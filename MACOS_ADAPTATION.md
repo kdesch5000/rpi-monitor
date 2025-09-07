@@ -151,7 +151,7 @@ source venv/bin/activate
 pip install psutil
 
 # 3. Run the monitor
-./run_macos_monitor.sh
+./macos_monitor.sh
 # or directly:
 source venv/bin/activate && python3 macos_monitor.py
 ```
@@ -159,7 +159,7 @@ source venv/bin/activate && python3 macos_monitor.py
 ### Temperature Monitoring (Optional)
 For accurate temperature readings, run with sudo:
 ```bash
-sudo ./run_macos_monitor.sh
+sudo ./macos_monitor.sh
 ```
 **Note**: Without sudo, monitor uses CPU load estimation for temperature.
 

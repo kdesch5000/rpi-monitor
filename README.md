@@ -1,10 +1,10 @@
-# System Monitor
+# Multi-Platform System Monitor
 
-A terminal-based system monitor similar to NMON that displays real-time system information. Available in three versions:
+A cross-platform terminal-based system monitor similar to NMON that displays real-time system information. Originally designed for Raspberry Pi, now featuring a comprehensive macOS implementation with advanced Apple Silicon support:
 
 - **`rpi_monitor.py`**: Optimized for Raspberry Pi hardware
 - **`ubuntu_monitor.py`**: Adapted for Ubuntu x86_64 systems  
-- **`macos_monitor.py`**: Adapted for macOS (Apple Silicon & Intel)
+- **`macos_monitor.py`**: **Featured version** adapted for macOS (Apple Silicon & Intel)
 
 ## Features
 
@@ -27,12 +27,26 @@ A terminal-based system monitor similar to NMON that displays real-time system i
 - **Disk Utilization**: Total disk space usage across all partitions with horizontal bar
 - **Enhanced Hardware Support**: Support for modern x86_64 hardware sensors
 
-### macOS Version (`macos_monitor.py`)
+### macOS Version (`macos_monitor.py`) - **Featured Implementation**
 - **Apple Silicon Support**: P-Core/E-Core labeling for M1/M2/M3 chips
-- **Temperature Monitoring**: CPU temperature via powermetrics or load estimation
+- **Advanced Temperature Monitoring**: CPU temperature via powermetrics (sudo) or intelligent load estimation
 - **APFS Filesystem**: Accurate disk usage calculation for macOS volume structure
 - **Smart Network Filtering**: Dynamic interface detection with 5-minute inactivity timeout
 - **Native Integration**: Uses BSD system calls and Darwin kernel interfaces
+- **Robust Authentication**: Single sudo prompt at startup with graceful fallback
+
+## Quick Start (macOS - Recommended)
+
+The macOS version represents the most advanced implementation with the latest features:
+
+```bash
+git clone https://github.com/kdesch5000/rpi-monitor.git
+cd rpi-monitor
+chmod +x macos_monitor.sh
+./macos_monitor.sh
+```
+
+The setup script automatically creates a Python virtual environment, installs dependencies, and launches the monitor.
 
 ## Installation
 
