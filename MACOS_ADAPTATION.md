@@ -297,6 +297,36 @@ def get_disk_usage(self):
 - **Main Data Volumes**: Correctly sums /System/Volumes/Data (user files) + root + VM
 - **No Double-Counting**: Uses APFS container size (228GB) only once
 
+### **11. Improved Sudo Authentication (Blocking)**
+```python
+def check_sudo_access(self):
+    """Check and authenticate sudo access for temperature monitoring"""
+    print("Checking for sudo access for accurate temperature monitoring...")
+    print("(This is optional - monitor will work with estimated temperatures if declined)")
+    
+    # Authenticate upfront and cache credentials
+    result = subprocess.run(['sudo', '-v'], timeout=30, capture_output=False, text=True)
+    
+    if result.returncode == 0:
+        # Test powermetrics actually works
+        result = subprocess.run([
+            'sudo', 'powermetrics', '--samplers', 'smc', 
+            '-n', '1', '-i', '100', '--format', 'plist'
+        ], capture_output=True, text=True, timeout=5)
+        
+        if result.returncode == 0 and 'CPU die temperature' in result.stdout:
+            self.sudo_available = True
+            self.temperature_mode = 'powermetrics'
+            print("✅ Sudo access confirmed - using powermetrics for accurate temperatures")
+```
+
+**Sudo Authentication Improvements:**
+- **Upfront Authentication**: Prompts for password once during startup (blocks until resolved)
+- **No Timer Interruptions**: Eliminates the problematic timer-based sudo calls during monitoring
+- **Cached Credentials**: Uses `sudo -v` to authenticate and cache, then `sudo -n` for non-interactive calls
+- **Graceful Degradation**: Falls back to temperature estimation if authentication fails
+- **User Control**: Clear messaging that sudo access is optional with 30-second timeout
+
 ## File Structure
 
 ```

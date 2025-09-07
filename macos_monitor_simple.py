@@ -13,6 +13,10 @@ class SimpleMacOSMonitor:
         self.network_timeout = 300
         self.network_history = {}
         
+        # Temperature monitoring capabilities
+        self.sudo_available = False
+        self.temperature_mode = 'estimate'
+        
     def get_temperature(self):
         """Get CPU temperature using estimation"""
         try:

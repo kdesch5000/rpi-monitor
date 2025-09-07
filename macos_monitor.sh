@@ -3,22 +3,24 @@
 # Script to run macOS monitor with proper Python environment
 cd "$(dirname "$0")"
 
-echo "Starting macOS System Monitor..."
-echo "Using virtual environment for psutil dependency"
+echo "macOS System Monitor Setup"
+echo "=========================="
 echo ""
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
-    echo "❌ Virtual environment not found. Creating one..."
+    echo "Setting up Python virtual environment..."
     python3 -m venv venv
     source venv/bin/activate
     pip install psutil
-    echo "✅ Virtual environment created and psutil installed"
+    echo "✅ Virtual environment created and dependencies installed"
+    echo ""
 else
-    echo "✅ Using existing virtual environment"
+    echo "✅ Virtual environment found"
 fi
 
-echo "Press 'q' to quit when the monitor starts"
+echo "Note: The monitor will ask for sudo access for accurate temperature readings."
+echo "      This is optional - you can decline and use temperature estimation instead."
 echo ""
 
 # Activate virtual environment and run monitor

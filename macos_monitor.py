@@ -29,38 +29,84 @@ class MacOSMonitor:
         self.network_last_activity = {}
         self.network_timeout = 300  # 5 minutes in seconds
         
-    def get_temperature(self):
-        """Get CPU temperature using powermetrics (requires sudo) or estimate from CPU usage"""
-        temps = {}
+        # Temperature monitoring capabilities
+        self.sudo_available = False
+        self.temperature_mode = 'estimate'  # 'powermetrics', 'estimate', or 'none'
         
-        # Try to get temperature from powermetrics (needs sudo)
+    def check_sudo_access(self):
+        """Check and authenticate sudo access for temperature monitoring"""
+        print("Checking for sudo access for accurate temperature monitoring...")
+        print("(This is optional - monitor will work with estimated temperatures if declined)")
+        
         try:
+            # Try a simple sudo command to check/cache credentials
             result = subprocess.run([
-                'sudo', 'powermetrics', '--samplers', 'smc', 
-                '-n', '1', '-i', '100', '--format', 'plist'
-            ], capture_output=True, text=True, timeout=3)
+                'sudo', '-v'  # Validates cached credentials or prompts for password
+            ], timeout=30, capture_output=False, text=True)
             
             if result.returncode == 0:
-                # Parse plist output for temperature data
-                # This is a simplified approach - real implementation would parse XML
-                output = result.stdout
-                if 'CPU die temperature' in output:
-                    # Extract temperature value (simplified regex approach)
-                    import re
-                    temp_match = re.search(r'CPU die temperature.*?(\d+(?:\.\d+)?)', output)
-                    if temp_match:
-                        temps['CPU'] = float(temp_match.group(1))
-        except:
-            # Fallback: estimate temperature based on CPU usage
+                # Test if powermetrics actually works
+                result = subprocess.run([
+                    'sudo', 'powermetrics', '--samplers', 'smc', 
+                    '-n', '1', '-i', '100', '--format', 'plist'
+                ], capture_output=True, text=True, timeout=5)
+                
+                if result.returncode == 0 and 'CPU die temperature' in result.stdout:
+                    self.sudo_available = True
+                    self.temperature_mode = 'powermetrics'
+                    print("✅ Sudo access confirmed - using powermetrics for accurate temperatures")
+                    return True
+                else:
+                    print("⚠️  Sudo available but powermetrics not working - using temperature estimation")
+            else:
+                print("❌ Sudo access declined - using temperature estimation")
+                
+        except subprocess.TimeoutExpired:
+            print("❌ Sudo authentication timed out - using temperature estimation")
+        except KeyboardInterrupt:
+            print("❌ Sudo authentication cancelled - using temperature estimation")
+        except Exception as e:
+            print(f"❌ Sudo check failed ({e}) - using temperature estimation")
+        
+        self.sudo_available = False
+        self.temperature_mode = 'estimate'
+        return False
+        
+    def get_temperature(self):
+        """Get CPU temperature using cached powermetrics access or estimate from CPU usage"""
+        temps = {}
+        
+        if self.temperature_mode == 'powermetrics' and self.sudo_available:
+            # Use powermetrics (sudo already authenticated)
             try:
-                cpu_percent = psutil.cpu_percent(interval=0.1)
-                # Rough estimation: idle ~30°C, full load ~80°C for M1
-                base_temp = 35
-                load_temp = 45
-                estimated_temp = base_temp + (cpu_percent / 100.0) * load_temp
-                temps['CPU_Est'] = estimated_temp
+                result = subprocess.run([
+                    'sudo', '-n', 'powermetrics', '--samplers', 'smc', 
+                    '-n', '1', '-i', '100', '--format', 'plist'
+                ], capture_output=True, text=True, timeout=3)
+                
+                if result.returncode == 0:
+                    output = result.stdout
+                    if 'CPU die temperature' in output:
+                        # Extract temperature value (simplified regex approach)
+                        import re
+                        temp_match = re.search(r'CPU die temperature.*?(\d+(?:\.\d+)?)', output)
+                        if temp_match:
+                            temps['CPU'] = float(temp_match.group(1))
+                            return temps
             except:
-                temps['CPU_Est'] = 40  # Default estimate
+                # Fall back to estimation if powermetrics fails
+                self.temperature_mode = 'estimate'
+        
+        # Use CPU load estimation
+        try:
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            # Rough estimation: idle ~35°C, full load ~80°C for M1
+            base_temp = 35
+            load_temp = 45
+            estimated_temp = base_temp + (cpu_percent / 100.0) * load_temp
+            temps['CPU_Est'] = estimated_temp
+        except:
+            temps['CPU_Est'] = 40  # Default estimate
         
         # Try to get additional thermal info from sysctl
         try:
@@ -764,7 +810,23 @@ if __name__ == "__main__":
     except:
         pass
     
+    print("Starting macOS System Monitor...")
+    print()
+    
     monitor = MacOSMonitor()
+    
+    # Check for sudo access before starting the main monitor
+    try:
+        monitor.check_sudo_access()
+        print()
+    except KeyboardInterrupt:
+        print("\nStartup cancelled.")
+        exit(0)
+    
+    print("Starting monitor interface...")
+    print("Press 'q' to quit once started")
+    print()
+    
     try:
         monitor.run()
     except KeyboardInterrupt:

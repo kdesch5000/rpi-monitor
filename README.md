@@ -65,10 +65,7 @@ A terminal-based system monitor similar to NMON that displays real-time system i
    ./macos_monitor.sh
    ```
 
-2. For accurate temperature readings (optional):
-   ```bash
-   sudo ./macos_monitor.sh
-   ```
+   **Note:** The monitor will prompt once for sudo access during startup for accurate temperature readings. This is optional - you can decline and use temperature estimation instead. No sudo prompts occur during monitoring.
 
 ## Usage
 
@@ -94,6 +91,11 @@ source venv/bin/activate && python3 macos_monitor.py
 # Simple text version (no curses):
 source venv/bin/activate && python3 macos_monitor_simple.py
 ```
+
+**Startup Process:**
+- Checks/creates Python virtual environment
+- Prompts once for optional sudo access (for accurate temperature readings)
+- Starts monitoring interface with no further interruptions
 
 ### Controls
 
