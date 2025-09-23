@@ -567,7 +567,7 @@ class RPiMonitor:
             
             # Get terminal dimensions
             max_y, max_x = self.screen.getmaxyx()
-            col_split = max_x // 2  # Split screen in half
+            col_split = max_x // 2 - max_x // 8  # Position right column 50% closer to left
             
             # Header
             self.screen.addstr(0, 0, "Raspberry Pi System Monitor", header_color)
