@@ -23,7 +23,15 @@ class RPiMonitor:
         self.max_temps = {}
         self.max_network_rates = defaultdict(lambda: {'rx': 0, 'tx': 0})
         self.max_disk_rates = {'read': 0, 'write': 0}
-        
+
+        # Caches for values backed by subprocess calls, which are expensive
+        # to spawn every update tick but rarely change second to second.
+        self.subprocess_cache_interval = 5.0
+        self._gpu_temp_cache = 0
+        self._gpu_temp_cache_time = 0
+        self._logged_users_cache = []
+        self._logged_users_cache_time = 0
+
     def get_temperature(self):
         """Get all available system temperatures"""
         temps = {}
@@ -36,17 +44,22 @@ class RPiMonitor:
         except:
             temps['CPU'] = 0
         
-        # GPU via vcgencmd
-        try:
-            result = subprocess.run(['vcgencmd', 'measure_temp'], 
-                                  capture_output=True, text=True, timeout=2)
-            if result.returncode == 0:
-                gpu_temp_str = result.stdout.strip().replace('temp=', '').replace("'C", '')
-                temps['GPU'] = float(gpu_temp_str)
-            else:
-                temps['GPU'] = 0
-        except:
-            temps['GPU'] = 0
+        # GPU via vcgencmd (cached: spawning a process every 1s tick is
+        # wasteful since GPU temp doesn't move that fast)
+        now = time.time()
+        if now - self._gpu_temp_cache_time >= self.subprocess_cache_interval:
+            try:
+                result = subprocess.run(['vcgencmd', 'measure_temp'],
+                                      capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    gpu_temp_str = result.stdout.strip().replace('temp=', '').replace("'C", '')
+                    self._gpu_temp_cache = float(gpu_temp_str)
+                else:
+                    self._gpu_temp_cache = 0
+            except:
+                self._gpu_temp_cache = 0
+            self._gpu_temp_cache_time = now
+        temps['GPU'] = self._gpu_temp_cache
         
         # NVMe temperatures (if available)
         try:
@@ -185,7 +198,11 @@ class RPiMonitor:
             return "Unknown"
     
     def get_logged_users(self):
-        """Get list of logged-in users"""
+        """Get list of logged-in users (cached: 'who' rarely changes second to second)"""
+        now = time.time()
+        if now - self._logged_users_cache_time < self.subprocess_cache_interval:
+            return self._logged_users_cache
+
         users = []
         try:
             result = subprocess.run(['who'], capture_output=True, text=True, timeout=2)
@@ -197,6 +214,8 @@ class RPiMonitor:
                             users.append(f"{parts[0]} ({parts[1]})")
         except:
             pass
+        self._logged_users_cache = users
+        self._logged_users_cache_time = now
         return users
     
     def get_cpu_usage(self):
@@ -555,8 +574,8 @@ class RPiMonitor:
     def update_display(self):
         """Update the display with current system information in 2-column layout"""
         try:
-            self.screen.clear()
-            
+            self.screen.erase()
+
             # Initialize colors if needed
             self.init_colors()
             
